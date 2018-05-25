@@ -1,0 +1,151 @@
+---
+title: "Linear Model"
+output: html_document
+---
+
+
+```{r iris}
+data("iris")
+names(iris)
+library(dplyr)
+iris_new=iris%>%select(-Species)
+View(iris_new)
+iris_model = kmeans(iris_new,centers = 4)   #only work on neumerical data
+iris_model$cluster
+
+length(iris_model$cluster)
+
+table(iris_model$cluster)
+
+iris_model
+
+```
+```{r}
+library("ggplot2")
+library(plotly)
+adv<-read.csv("E:\\SEMtwo\\ML\\Data\\Advertising.csv")
+adv_tranning<-adv[sample(seq(1:nrow(adv)),162),]
+
+adv_testing<-adv[sample(seq(1:nrow(adv)),38),]
+
+#Fit Model
+adv_model<-lm(sales~TV,data=adv_tranning)
+
+#________________
+
+m=0.09
+c=1
+sales_predicted<-m*adv_tranning$TV+c
+error<-sum((adv_tranning$sales - sales_predicted)^2) / nrow(adv_tranning)
+error
+
+{{plot(adv_tranning$TV,adv_tranning$sales)
+  lines(adv_tranning$TV,sales_predicted)}}
+```
+```{r}
+m<-seq(0,1,length.out = 10)
+for (i in m) {
+sales_predicted<-i*adv_tranning$TV+c
+error<-sum((adv_tranning$sales - sales_predicted)^2) / nrow(adv_tranning)
+print(error)
+{{plot(adv_tranning$TV,adv_tranning$sales)
+  lines(adv_tranning$TV,sales_predicted)}}
+}
+
+
+```
+
+
+
+
+
+```{r}
+m<-seq(-1,1,length.out = 100)
+e<-c()
+for (i in m) {
+sales_predicted<-i*adv_tranning$TV+c
+error<-sum((adv_tranning$sales - sales_predicted)^2) / nrow(adv_tranning)
+print(error)
+e=c(e,error)
+}
+plot(e)
+
+#find index of min error
+which(e==min(e))
+
+m[54]
+
+```
+
+
+# Taking with m and c manually linier model only for sale~TV
+```{r}
+m<-seq(-1,1,length.out = 100)
+c<-seq(0,10,length.out = 100)
+e<-c()
+m_rep=c()
+c_rep=c()
+for (i in m) {
+for (j in c) {
+sales_predicted<-i*adv_tranning$TV+j
+error = sum((adv_tranning$sales - sales_predicted)^2) / nrow(adv_tranning)
+m_rep = c(m_rep,i)
+c_rep = c(c_rep,j)
+e=c(e,error)  
+}
+}
+plot(e)
+
+#find index of min error
+min(e)
+which(e==min(e))
+
+models=data.frame(slope=m_rep,intersect=c_rep,mse=e)
+dim(models)
+models[models$mse==min(models$mse),]
+```
+#3d PLOT
+
+```{r}
+library(plotly)
+m<-seq(-1,1,length.out = 100)
+c<-seq(0,10,length.out = 100)
+mspace=m
+cspace=c
+zspace=matrix(e,nrow=length(m),ncol = length(c))
+plot_ly(x=mspace,y=cspace,z=zspace)%>%add_surface()
+
+```
+
+
+```{r}
+m1<-seq(-1,1,length.out = 10)
+m2<-seq(-1,1,length.out = 10)
+c<-seq(-10,10,length.out = 10)
+
+e<-c()
+m1_rep=c()
+m2_rep=c()
+c_rep=c()
+for (i in m1) {
+for (j in c) {
+  for (k in m2) {
+sales_predicted<-i*adv_tranning$TV+j + k*adv_tranning$newspaper
+error = sum((adv_tranning$sales - sales_predicted)^2) / nrow(adv_tranning)
+m1_rep = c(m1_rep,i)
+c_rep = c(c_rep,j)
+m2_rep = c(m2_rep,k)
+e=c(e,error)  
+}
+}
+}
+
+
+#find index of min error
+min(e)
+which(e==min(e))
+
+models=data.frame(slope1=m1_rep,slope2=m2_rep,intersect=c_rep,mse=e)
+dim(models)
+models[models$mse==min(models$mse),]
+```
