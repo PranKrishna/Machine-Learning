@@ -1,0 +1,462 @@
+---
+title: "Decision Trees"
+author: "PranKrishna Dolai"
+date: "May 3, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(tree)
+library(rpart)
+adv = read.csv('e:/ml/Advertising.csv')
+```
+
+```{r}
+model = tree(sales~TV, data=adv)
+{{plot(model)
+  text(model)}}
+```
+
+### MSE for single cut
+```{r}
+cut = 100
+
+df = data.frame(x=adv$TV, y=adv$sales)
+
+samples_left = df %>% filter(x < cut)
+samples_right = df %>% filter(x > cut)
+avg_left = mean(samples_left$y)
+avg_right = mean(samples_right$y)
+
+df$yhat = ifelse(df$x<cut, avg_left, avg_right)
+mse = sum((df$y-df$yhat)^2)/nrow(df)
+mse
+```
+
+### MSE for all the cuts
+```{r}
+xx = c(1,2,3,4,5)
+(xx[1:length(xx)-1] + xx[2:length(xx)]) / 2
+```
+```{r}
+df = data.frame(x=adv$TV, y=adv$sales)
+tv_uniqs = sort(unique(df$x))
+cuts = (tv_uniqs[1:length(tv_uniqs)-1] + tv_uniqs[2:length(tv_uniqs)]) / 2
+mse_cuts = c()
+for (cut in cuts){
+  samples_left = df %>% filter(x < cut)
+  samples_right = df %>% filter(x > cut)
+  avg_left = mean(samples_left$y)
+  avg_right = mean(samples_right$y)
+  
+  df$yhat = ifelse(df$x<cut, avg_left, avg_right)
+  curr_mse = sum((df$y-df$yhat)^2)/nrow(df)
+  mse_cuts = c(mse_cuts, curr_mse)
+}
+result = data.frame(cuts=cuts, mse=mse_cuts)
+result %>% arrange(mse) %>% head(1)
+```
+
+```{r}
+temp = adv %>% filter(TV>122.05 & TV<240.9)
+df = data.frame(x=temp$TV, y=temp$sales)
+
+tv_uniqs = sort(unique(df$x))
+cuts = (tv_uniqs[1:length(tv_uniqs)-1] + tv_uniqs[2:length(tv_uniqs)]) / 2
+mse_cuts = c()
+for (cut in cuts){
+  samples_left = df %>% filter(x < cut)
+  samples_right = df %>% filter(x > cut)
+  avg_left = mean(samples_left$y)
+  avg_right = mean(samples_right$y)
+  
+  df$yhat = ifelse(df$x<cut, avg_left, avg_right)
+  curr_mse = sum((df$y-df$yhat)^2)/nrow(df)
+  mse_cuts = c(mse_cuts, curr_mse)
+}
+result = data.frame(cuts=cuts, mse=mse_cuts)
+result %>% arrange(mse) %>% head(1)
+
+```
+
+```{r}
+model2 = tree(sales~TV+radio, data=adv)
+{{plot(model2)
+text(model2)}}
+```
+
+```{r}
+temp = adv #%>% filter(TV>194.55 & radio >26.85)
+df = data.frame(TV=temp$TV, radio=temp$radio, y=temp$sales)
+tv_uniqs = sort(unique(df$TV))
+tv_cuts = (tv_uniqs[1:length(tv_uniqs)-1] + tv_uniqs[2:length(tv_uniqs)]) / 2
+radio_uniqs = sort(unique(df$radio))
+radio_cuts = (radio_uniqs[1:length(radio_uniqs)-1] + radio_uniqs[2:length(radio_uniqs)]) / 2
+
+predictors = c(rep('TV', length(tv_cuts)),
+               rep('radio', length(radio_cuts)))
+cuts = c(tv_cuts, radio_cuts)
+mse_cuts = c()
+for (i in seq(1, length(cuts))){
+  cut = cuts[i]
+  samples_left = df[df[,predictors[i]]<cut, ]
+  samples_right = df[df[,predictors[i]]>cut, ]
+  avg_left = mean(samples_left$y)
+  avg_right = mean(samples_right$y)
+  
+  df$yhat = ifelse(df[,predictors[i]]<cut, avg_left, avg_right)
+  curr_mse = sum((df$y-df$yhat)^2)/nrow(df)
+  mse_cuts = c(mse_cuts, curr_mse)
+}
+result = data.frame(predictor=predictors, cuts=cuts, mse=mse_cuts)
+result %>% arrange(mse) %>% head(1)
+```
+
+```{r}
+df[df[,'TV']>cut,]
+```
+
+```{r}
+temp = adv #%>% filter(TV>194.55 & radio >26.85)
+df = data.frame(TV=temp$TV, radio=temp$radio, y=temp$sales)
+tv_uniqs = sort(unique(df$TV))
+tv_cuts = (tv_uniqs[1:length(tv_uniqs)-1] + tv_uniqs[2:length(tv_uniqs)]) / 2
+radio_uniqs = sort(unique(df$radio))
+radio_cuts = (radio_uniqs[1:length(radio_uniqs)-1] + radio_uniqs[2:length(radio_uniqs)]) / 2
+
+predictors = c(rep('TV', length(tv_cuts)),
+               rep('radio', length(radio_cuts)))
+cuts = c(tv_cuts, radio_cuts)
+vardev_cuts = c()
+for (i in seq(1, length(cuts))){
+  cut = cuts[i]
+  samples_left = df[df[,predictors[i]]<cut, ]
+  samples_right = df[df[,predictors[i]]>cut, ]
+  avg_left = mean(samples_left$y)
+  avg_right = mean(samples_right$y)
+  
+  curr_vardev = var(df$y) - (nrow(samples_left)/nrow(df))*var(samples_left$y) -
+    (nrow(samples_right)/nrow(df))*var(samples_right$y)
+  vardev_cuts = c(vardev_cuts, curr_vardev)
+}
+result = data.frame(predictor=predictors, cuts=cuts, vardev=vardev_cuts)
+result %>% arrange(-vardev) %>% head(1)
+```
+
+
+```{r}
+hr = read.csv('e:/datasets/ibm-watson/HR Analytics.csv')
+
+View(hr)
+
+hr$Attrition = as.factor(hr$Attrition)
+model = rpart(Attrition~OverTime, data=hr)
+library(rattle)
+fancyRpartPlot(model)
+library(dplyr)
+nrow(hr %>% dplyr::filter(OverTime=='No')) 
+unique(hr$OverTime)
+```
+
+```{r}
+model = rpart(Attrition~Gender+OverTime, data=hr)
+fancyRpartPlot(model)
+```
+
+
+```{r}
+model = rpart(Attrition~MonthlyIncome, data=hr)
+fancyRpartPlot(model)
+```
+
+
+## Numerical Input
+```{r}
+
+temp = hr %>% filter(MonthlyIncome < 2802)
+N = nrow(temp)
+mi_uniqs = sort(unique(temp$MonthlyIncome))
+mi_cuts = (mi_uniqs[1:length(mi_uniqs)-1] + mi_uniqs[2:length(mi_uniqs)]) / 2
+
+GIs = c()
+for (cut in mi_cuts){
+  samples_left = temp %>% filter(MonthlyIncome<cut)
+  samples_right = temp %>% filter(MonthlyIncome>cut)
+  Nl = nrow(samples_left)
+  Nr = nrow(samples_right)
+  
+  # Left side GI
+  GI_left = 1 - (nrow(samples_left %>% filter(Attrition==0))/Nl)^2 -  (nrow(samples_left %>% filter(Attrition==1))/Nl)^2
+  
+  # Right side GI
+  GI_right = 1 - (nrow(samples_right %>% filter(Attrition==0))/Nr)^2 -  (nrow(samples_right %>% filter(Attrition==1))/Nr)^2
+  
+  ## Overall GI 
+  GI = (Nl/N*GI_left) + (Nr/N*GI_right)
+  GIs = c(GIs, GI)
+}
+
+result = data.frame(Predictor=rep('MonthlyIncome', length(mi_cuts)),
+                    cut=mi_cuts,
+                    GI=GIs)
+result %>% arrange(GI) %>% head(1)
+
+
+```
+
+
+## More Numerical columns as inputs
+```{r}
+model = rpart(Attrition~MonthlyIncome, data=hr)
+fancyRpartPlot(model)
+```
+
+```{r}
+temp = hr %>% filter(MonthlyIncome < 2802)
+N = nrow(temp)
+mi_uniqs = sort(unique(temp$MonthlyIncome))
+mi_cuts = (mi_uniqs[1:length(mi_uniqs)-1] + mi_uniqs[2:length(mi_uniqs)]) / 2
+
+
+age_uniqs = sort(unique(temp$Age))
+age_cuts = (age_uniqs[1:length(age_uniqs)-1] + age_uniqs[2:length(age_uniqs)]) / 2
+
+GIs = c()
+cuts = c(mi_cuts, age_cuts)
+preds = c(rep('MonthlyIncome', length(mi_cuts)),
+          rep('Age', length(age_cuts)))
+for (i in seq(1,length(cuts))){
+  cut = cuts[i]
+  samples_left = temp[temp[,preds[i]]<cut,]
+  samples_right = temp[temp[,preds[i]]>cut,]
+  Nl = nrow(samples_left)
+  Nr = nrow(samples_right)
+  
+  # Left side GI
+  GI_left = 1 - (nrow(samples_left %>% filter(Attrition==0))/Nl)^2 -  (nrow(samples_left %>% filter(Attrition==1))/Nl)^2
+  
+  # Right side GI
+  GI_right = 1 - (nrow(samples_right %>% filter(Attrition==0))/Nr)^2 -  (nrow(samples_right %>% filter(Attrition==1))/Nr)^2
+  
+  ## Overall GI 
+  GI = (Nl/N*GI_left) + (Nr/N*GI_right)
+  GIs = c(GIs, GI)
+}
+
+result = data.frame(Predictor=preds,
+                    cut=cuts,
+                    GI=GIs)
+result %>% arrange(GI) %>% head(2)
+
+```
+
+
+
+
+```{r}
+pred = 'Age'
+cut = 22
+
+nrow(temp[temp[,pred]<cut,])
+```
+
+
+### Multiclass Input
+```{r}
+model = rpart(Attrition~MaritalStatus, data=hr)
+fancyRpartPlot(model)
+```
+
+```{r}
+ms_uniqs = unique(hr$MaritalStatus)
+N = nrow(hr)
+GIs = c()
+for (status in ms_uniqs){
+  samples_left = hr %>% filter(MaritalStatus == status)
+  samples_right = hr %>% filter(MaritalStatus != status)
+  Nl = nrow(samples_left)
+  Nr = nrow(samples_right)
+  GI_left = 1 - (nrow(samples_left %>% filter(Attrition==0))/Nl)^2 -  (nrow(samples_left %>% filter(Attrition==1))/Nl)^2
+  GI_right = 1 - (nrow(samples_right %>% filter(Attrition==0))/Nr)^2 -  (nrow(samples_right %>% filter(Attrition==1))/Nr)^2
+  GI = (Nl/N*GI_left) + (Nr/N*GI_right)
+  GIs = c(GIs, GI)  
+}
+result = data.frame(left=ms_uniqs, GI=GIs)
+result %>% arrange(GI)
+```
+
+
+
+```{r}
+job_uniqs = unique(hr$JobRole)
+temp = hr
+GIs = c()
+jobs_left_all = c()
+jobs_right_all = c()
+for (n in seq(1, 4)){
+  for (i in combn(job_uniqs, n, simplify = F)){
+    jobs_left = i
+    jobs_right = job_uniqs[!job_uniqs %in% jobs_left]
+    samples_left = temp %>% filter(JobRole %in% jobs_left)
+    samples_right = temp %>% filter(JobRole %in% jobs_right)
+    Nl = nrow(samples_left)
+    Nr = nrow(samples_right)
+    GI_left = 1 - (nrow(samples_left %>% filter(Attrition==0))/Nl)^2 -  (nrow(samples_left %>% filter(Attrition==1))/Nl)^2
+    GI_right = 1 - (nrow(samples_right %>% filter(Attrition==0))/Nr)^2 -  (nrow(samples_right %>% filter(Attrition==1))/Nr)^2
+    GI = (Nl/N*GI_left) + (Nr/N*GI_right)
+    GIs = c(GIs, GI)
+    jobs_left_all = c(jobs_left_all, paste0(jobs_left, collapse = ','))
+    jobs_right_all = c(jobs_right_all, paste0(jobs_right, collapse = ','))
+  }  
+}
+
+result = data.frame(jobs_left = jobs_left_all, 
+                    jobs_right = jobs_right_all,
+                    GI=GIs)
+View(result)
+result %>% arrange(GI) %>% head(1)
+```
+
+```{r, fig.width=12}
+model = rpart(Attrition~JobRole, data=hr)
+fancyRpartPlot(model)
+```
+
+```{r}
+job_uniqs[!job_uniqs %in% jobs_left]
+```
+
+
+
+```{r}
+model = rpart(Attrition~OverTime, data=hr)
+fancyRpartPlot(model)
+```
+
+```{r}
+table(hr$Attrition)
+237/1470
+samples_left = hr %>% filter(OverTime=='No')
+samples_right = hr %>% filter(OverTime=='Yes')
+nrow(samples_right)/nrow(hr)
+
+table(samples_right$Attrition)
+127/nrow(samples_right)
+```
+
+
+### Output parameters
+```{r}
+hr = read.csv('e:/datasets/ibm-watson/HR Analytics.csv')
+hr$Attrition = as.factor(hr$Attrition)
+hr_train = hr[sample(seq(1, nrow(hr)), (0.7*nrow(hr))),]
+hr_test = hr[sample(seq(1, nrow(hr)), (0.3*nrow(hr))),]
+dim(hr_train)
+dim(hr_test)
+
+model = rpart(Attrition~MonthlyIncome+OverTime, data=hr_train, control=rpart.control(cp=-1, minsplit = 2, minbucket = 1))
+fancyRpartPlot(model)
+result = as.data.frame(predict(model, hr_test))
+View(result)
+hr_test$predict = ifelse(result$`0`>0.5, 0, 1)
+View(hr_test[, c('Attrition','predict')])
+
+hr_test %>% filter(predict==Attrition) %>% nrow()
+404 / nrow(hr_test)
+
+table(hr$Attrition)
+
+library(caret)
+
+table(hr_test$predict, hr_test$Attrition)
+
+hr_test %>% filter(Attrition==1, predict==0) %>% nrow()
+
+
+hr_test$predict = as.factor(hr_test$predict)
+cm = confusionMatrix(hr_test$predict, hr_test$Attrition, positive = '1')
+tp = 16
+tn = 354
+fp = 10
+fn = 61
+
+sns = tp / (tp+fn)
+sns
+cm
+```
+
+```{r}
+model = rpart(Attrition~MonthlyIncome+OverTime,data=hr)
+
+fancyRpartPlot(model)
+
+printcp(model)
+```
+
+### Simple Decision Tree
+```{r}
+model = rpart(Attrition~., data=hr_train)
+result = as.data.frame(predict(model, hr_test))
+hr_test$predict = ifelse(result$`0`>0.5, 0, 1)
+hr_test$predict = as.factor(hr_test$predict)
+confusionMatrix(hr_test$predict, hr_test$Attrition, positive='1')
+
+table(hr_train$Attrition)
+
+858/nrow(hr_train)
+```
+```{r}
+library(randomForest)
+mtry = round(sqrt(length(colnames(hr_train))-1))
+model_rf = randomForest(Attrition~., data=hr_train,
+                        ntree=400,
+                        mtry=mtry)
+hr_test$predicted = predict(model_rf, hr_test)
+cm = confusionMatrix(hr_test$predicted, hr_test$Attrition, positive='1')
+cm$overall['Accuracy']*100
+cm$byClass['Sensitivity']*100
+
+```
+
+```{r}
+input_predictors = colnames(hr_train %>% select(-Attrition))
+mtry = round(sqrt(length(input_predictors)))
+ntree = 400
+result = data.frame(actual = hr_test$Attrition)
+for (i in seq(1, ntree)){
+  sample_predictors = input_predictors[sample(1:length(input_predictors), mtry)]
+  samples_index = sample(seq(1,nrow(hr_train)), (0.6*nrow(hr_train)))
+  sample_data = hr_train[samples_index, c(sample_predictors, 'Attrition')]
+  curr_model = rpart(Attrition~., data=sample_data)
+  result[,paste0('tree_',i, collapse = '')] = predict(curr_model, (hr_test %>% select(sample_predictors)), type='class')
+}
+
+result$count_0 = rowSums((result %>% select(-actual)) == 0)
+result$count_1 = rowSums((result %>% select(-actual)) == 1)
+
+result$final = ifelse(result$count_0>result$count_1, 0, 1)
+```
+
+```{r}
+model_rf
+```
+
+
+
+### Ada Boost
+```{r}
+library(adabag)
+model_boost = boosting(Attrition~., data=hr_train)
+predict_obj = predict(model_boost, hr_test)
+hr_test$pred = predict_obj$class
+hr_test$Attrition = as.factor(hr_test$Attrition)
+hr_test$pred = as.factor(hr_test$pred)
+confusionMatrix(hr_test$pred, hr_test$Attrition, positive = '1')
+
+```
+
