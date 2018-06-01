@@ -1,0 +1,142 @@
+---
+title: "Gradient Decent"
+author: "PraNkrishna Dolai"
+date: "2 May 2018"
+output: html_document
+---
+
+
+
+
+
+## Gradient Decent
+
+
+```{r}
+library(dplyr)
+
+x=rnorm(100)
+y=0.05*x
+df_xy=data.frame(x=x,y=y)
+plot(x,y)
+cor(x,y)
+
+m=1000
+alpha=0.1
+n_iteration=1000
+errors=c()
+m_vals=c()
+for (i in seq(1,n_iteration)) {
+m_vals=c(m_vals,m)  
+cur_errors=sum((y-(m*x))^2)/length(x)
+errors=c(errors,cur_errors)
+df_xy=df_xy%>%mutate(xy=x*y)
+df_xy=df_xy%>%mutate(mx_square=m*(x^2))
+df_xy=df_xy%>%mutate(xy_mx2=xy-mx_square)
+sigma_xy_mx2=sum(df_xy$xy_mx2)
+m_gradient=-2/length(x)*sigma_xy_mx2
+
+m=m-alpha*m_gradient  #gradient of m
+}
+
+print(m)
+plot(errors)
+
+{{plot(m_vals,errors)
+lines(m_vals,errors)}}
+```
+
+```{r}
+install.packages("ISLR")
+library(ISLR)
+
+
+adv<-read.csv("E:\\SEMtwo\\ML\\Data\\Advertising.csv")
+
+
+adv_tranning<-adv[sample(seq(1:nrow(adv)),162),]
+
+adv_testing<-adv[sample(seq(1:nrow(adv)),38),]
+
+
+y=adv_tranning$sales
+x=scale(adv_tranning$TV)
+df_xy=data.frame(x=x,y=y)
+
+m=10
+c=1
+alpha=0.01
+n_iteration=1000
+
+errors=c()
+m_vals=c()
+c_vals=c()
+for (i in seq(1,n_iteration)) {
+m_vals=c(m_vals,m)  
+c_vals=c(c_vals,c)
+cur_errors=sum((y-(m*x))^2)/length(x)
+errors=c(errors,cur_errors)
+df_xy=df_xy%>%mutate(xy=x*y)
+df_xy=df_xy%>%mutate(mx_square=m*(x^2))
+df_xy=df_xy%>%mutate(xy_mx2=xy-mx_square)
+
+sigma_xy_mx2=sum(df_xy$xy_mx2-c*df_xy$x)
+m_gradient=-2/length(x)*sigma_xy_mx2
+m=m-alpha*m_gradient
+
+
+
+df_xy=df_xy%>%mutate(xy_mx=m*df_xy$x)
+sigma_xy_c=sum(df_xy$y-df_xy$xy_mx-c)
+c_gradient=-2/length(x)*sigma_xy_c
+c=c-alpha*c_gradient
+
+}
+
+print(m)
+print(c)
+plot(errors)
+lm(y~x,data=df_xy)
+
+
+{{plot(m_vals,errors)
+lines(m_vals,errors)}}
+
+
+```
+
+```{r}
+install.packages("rgl")
+library(rgl)
+open3d()
+
+plot3d(x=m_vals,y=c_vals,z=errors)
+
+
+###################
+#SURFACE PLOT
+m<-seq(-1,1,length.out = 100)
+c<-seq(0,10,length.out = 100)
+e<-c()
+m_rep=c()
+c_rep=c()
+for (i in m) {
+for (j in c) {
+sales_predicted<-i*adv_tranning$TV+j
+error = sum((adv_tranning$sales - sales_predicted)^2) / nrow(adv_tranning)
+m_rep = c(m_rep,i)
+c_rep = c(c_rep,j)
+e=c(e,error)  
+}
+}
+open3d()
+plot3d(x=m_rep,y=c_rep,z=e,col=rainbow(100))
+
+
+
+
+
+```
+
+
+
